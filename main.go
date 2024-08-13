@@ -18,6 +18,7 @@ func main() {
 	var chk bool
 	var roll, pich, yaw float64
 	var proc uint8
+	//var cab bno055.SensorCalibration
 	err := machine.I2C0.Configure(machine.I2CConfig{
 		Frequency: 400 * machine.KHz,
 	})
@@ -30,7 +31,21 @@ func main() {
 	led.Configure(machine.PinConfig{Mode: machine.PinOutput})
 	d := bno055.New(machine.I2C0)
 
-	if d.Init() {
+	if d.Init(bno055.OPERATION_MODE_NDOF) {
+		/*fmt.Println("Cab Start")
+		for {
+			time.Sleep(10 * time.Millisecond)
+			chk, cab = d.GetCalibration()
+			if !chk {
+				continue
+			} else if cab.Gyro != 0x03 || cab.Mag != 0x03 {
+				fmt.Println(cab)
+				continue
+			} else {
+				break
+			}
+		}
+		fmt.Println("Cab End")*/
 		proc = 6
 		for {
 			led.Low()

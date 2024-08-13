@@ -59,6 +59,13 @@ type Device struct {
 	SensorData    Sensor
 }
 
+type SensorCalibration struct {
+	Systm uint16
+	Gyro  uint16
+	Accel uint16
+	Mag   uint16
+}
+
 //--- 外部公開レシーバ ---
 
 // New レシーバ作成
@@ -256,6 +263,24 @@ func (d *Device) GetTemp() (chk bool, temp int8) {
 	}
 	temp = int8(data[0])
 	return true, temp
+}
+func (d *Device) GetCalibration() (chk bool, snr SensorCalibration) {
+	data := make([]byte, 1)
+	err := d.readRegister(d.deviceAddress, uint8(BNO055_CALIB_STAT_ADDR), data)
+	if err != nil {
+		snr.Accel = 0xff
+		snr.Mag = 0xff
+		snr.Gyro = 0xff
+		snr.Systm = 0xff
+		chk = false
+	} else {
+		snr.Systm = (uint16(data[0]) >> 6) & 0x03
+		snr.Gyro = (uint16(data[0]) >> 4) & 0x03
+		snr.Accel = (uint16(data[0]) >> 2) & 0x03
+		snr.Mag = (uint16(data[0])) & 0x03
+		chk = true
+	}
+	return chk, snr
 }
 
 // --------------------------------- 内部処理用
