@@ -20,9 +20,12 @@ func main() {
 	var chk bool
 	var roll, pich, yaw float64
 	var proc uint8
-	machine.I2C0.Configure(machine.I2CConfig{
+	err := machine.I2C0.Configure(machine.I2CConfig{
 		Frequency: 400 * machine.KHz,
 	})
+	if err != nil {
+		return
+	}
 
 	led := machine.LED
 
