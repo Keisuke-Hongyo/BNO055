@@ -1,11 +1,9 @@
-// This example shows how to use 128x64 display over I2C
-// Tested on Seeeduino XIAO Expansion Board https://wiki.seeedstudio.com/Seeeduino-XIAO-Expansion-Board/
-//
-// According to manual, I2C address of the display is 0x78, but that's 8-bit address.
-// TinyGo operates on 7-bit addresses and respective 7-bit address would be 0x3C, which we use below.
-//
-// To learn more about different types of I2C addresses, please see following page
-// https://www.totalphase.com/support/articles/200349176-7-bit-8-bit-and-10-bit-I2C-Slave-Addressing
+/*----------------------------------------------------------------------------------*/
+/*                  BNO055 Library For Tingo Test Program                           */
+/*                      Programed By Keisuke Hongyo                                 */
+/*                           Date 13.Aug.2020                                       */
+/*                 Special Thanks for  Suzupy , Shun and Yukipy                     */
+/*----------------------------------------------------------------------------------*/
 
 package main
 
