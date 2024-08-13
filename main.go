@@ -10,98 +10,123 @@ package main
 import (
 	"bno055/bno055"
 	"fmt"
+	"image/color"
 	"machine"
 	"time"
+	"tinygo.org/x/drivers/ssd1306"
 )
 
-func main() {
+func getSensor(ch1 chan<- bool) {
 	var chk bool
 	var roll, pich, yaw float64
-	var proc uint8
+
+	d := bno055.New(machine.I2C0)
+
+	_ = d.Init(bno055.OPERATION_MODE_NDOF)
+
+	for {
+		for {
+			chk, roll, pich, yaw = d.QuaternionToEuler()
+			if chk {
+				break
+			}
+			time.Sleep(time.Millisecond * 100)
+		}
+
+		fmt.Printf("Euler roll=%f, pich=%f, yaw=%f \n", roll, pich, yaw)
+
+		ch1 <- true
+		time.Sleep(time.Millisecond * 100)
+	}
+}
+
+func ctrlLed(ch2 chan<- bool) {
+	led := machine.LED
+	led.Configure(machine.PinConfig{Mode: machine.PinOutput})
+	for {
+		led.Low()
+		time.Sleep(time.Millisecond * 100)
+
+		led.High()
+		time.Sleep(time.Millisecond * 100)
+
+		ch2 <- true
+	}
+}
+
+func procDisp(ch3 chan<- bool) {
+	// Display
+	display := ssd1306.NewI2C(machine.I2C0)
+
+	display.Configure(ssd1306.Config{
+		Address: 0x3C,
+		Width:   128,
+		Height:  64,
+	})
+
+	display.ClearDisplay()
+
+	x := int16(0)
+	y := int16(0)
+	deltaX := int16(1)
+	deltaY := int16(1)
+
+	for {
+		pixel := display.GetPixel(x, y)
+		c := color.RGBA{255, 255, 255, 255}
+		if pixel {
+			c = color.RGBA{0, 0, 0, 255}
+		}
+		display.SetPixel(x, y, c)
+		_ = display.Display()
+
+		x += deltaX
+		y += deltaY
+
+		if x == 0 || x == 127 {
+			deltaX = -deltaX
+		}
+
+		if y == 0 || y == 63 {
+			deltaY = -deltaY
+		}
+		time.Sleep(time.Millisecond * 50)
+		ch3 <- true
+	}
+}
+
+func init() {
 	err := machine.I2C0.Configure(machine.I2CConfig{
 		Frequency: 400 * machine.KHz,
 	})
 	if err != nil {
 		return
 	}
+}
 
-	led := machine.LED
+func main() {
 
-	led.Configure(machine.PinConfig{Mode: machine.PinOutput})
-	d := bno055.New(machine.I2C0)
+	// 起動待ち
+	time.Sleep(time.Millisecond * 100)
 
-	if d.Init() {
-		proc = 6
-		for {
-			led.Low()
-			time.Sleep(time.Millisecond * 50)
-			switch proc {
-			case 1:
-				chk = d.GetAccl()
-				if !chk {
-					println("Error")
-				} else {
-					fmt.Printf("Accl xData=%d, Ydata=%d, Zdata=%d \n",
-						d.SensorData.AcclData.XData, d.SensorData.AcclData.YData, d.SensorData.AcclData.ZData)
-				}
-				break
-			case 2:
-				chk = d.GetGyro()
-				if !chk {
-					println("Error")
-				} else {
-					fmt.Printf("Gyro xData=%d, Ydata=%d, Zdata=%d \n",
-						d.SensorData.GyroData.XData, d.SensorData.GyroData.YData, d.SensorData.GyroData.ZData)
-				}
-				break
-			case 3:
-				chk = d.GetMag()
-				if !chk {
-					println("Error")
-				} else {
-					fmt.Printf("Mag xData=%d, Ydata=%d, Zdata=%d \n",
-						d.SensorData.MagData.XData, d.SensorData.MagData.YData, d.SensorData.MagData.ZData)
-				}
-				break
-			case 4:
-				chk = d.GetEuler()
-				if !chk {
-					println("Error")
-				} else {
-					fmt.Printf("Quaternion RData=%d, Pdata=%d, Hdata=%d \n",
-						d.SensorData.EulerData.RData, d.SensorData.EulerData.PData, d.SensorData.EulerData.HData,
-					)
-				}
-				break
-			case 5:
-				chk = d.GetQuaternion()
-				if !chk {
-					println("Error")
-				} else {
-					fmt.Printf("Quaternion wData=%d, xData=%d, Ydata=%d, Zdata=%d \n",
-						d.SensorData.QutaData.WData, d.SensorData.QutaData.XData,
-						d.SensorData.QutaData.YData, d.SensorData.QutaData.ZData,
-					)
-				}
-				break
-			case 6:
-				_, temp := d.GetTemp()
-				time.Sleep(time.Millisecond * 10)
+	// チャネル作成
+	ch1 := make(chan bool, 1)
+	ch2 := make(chan bool, 1)
+	ch3 := make(chan bool, 1)
 
-				for {
-					chk, roll, pich, yaw = d.QuaternionToEuler()
-					if chk {
-						break
-					}
-					time.Sleep(time.Millisecond * 100)
-				}
+	go getSensor(ch1)
+	go ctrlLed(ch2)
+	go procDisp(ch3)
 
-				fmt.Printf("Euler temp=%d roll=%f, pich=%f, yaw=%f \n", temp, roll, pich, yaw)
-				break
-			}
-
-			led.High()
-			time.Sleep(time.Millisecond * 50)
+	for {
+		// Receive channel data from Goroutine
+		select {
+		case <-ch1:
+			break
+		case <-ch2:
+			break
+		case <-ch3:
+			break
 		}
 	}
 }
