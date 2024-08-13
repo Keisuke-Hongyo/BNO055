@@ -16,13 +16,52 @@ import (
 	"tinygo.org/x/drivers/ssd1306"
 )
 
-func getSensor(ch1 chan<- bool) {
+type sensor struct {
+	roll float64
+	pich float64
+	yaw  float64
+}
+
+func getSensor(snrCh chan<- sensor) {
 	var chk bool
-	var roll, pich, yaw float64
+	var snr sensor
 
 	d := bno055.New(machine.I2C0)
 
 	_ = d.Init(bno055.OPERATION_MODE_NDOF)
+
+	for {
+		for {
+			chk, snr.roll, snr.pich, snr.yaw = d.QuaternionToEuler()
+			if chk {
+				break
+			}
+			time.Sleep(time.Millisecond * 100)
+		}
+
+		fmt.Printf("Euler roll=%f, pich=%f, yaw=%f \n", snr.roll, snr.pich, snr.yaw)
+
+		snrCh <- snr
+		time.Sleep(time.Millisecond * 10)
+	}
+}
+
+func ctrlLed(ledCh chan<- bool) {
+	led := machine.LED
+	led.Configure(machine.PinConfig{Mode: machine.PinOutput})
+	for {
+		led.Low()
+		time.Sleep(time.Millisecond * 100)
+
+		led.High()
+		time.Sleep(time.Millisecond * 100)
+
+		ledCh <- true
+	}
+}
+
+func procDisp(snrCh <-chan sensor, ch3 chan<- bool) {
+
 	dev := ssd1306.NewI2C(machine.I2C0)
 
 	dev.Configure(ssd1306.Config{
@@ -45,78 +84,17 @@ func getSensor(ch1 chan<- bool) {
 	}
 
 	for {
-		for {
-			chk, roll, pich, yaw = d.QuaternionToEuler()
-			if chk {
-				break
-			}
-			time.Sleep(time.Millisecond * 100)
+		select {
+		case s := <-snrCh:
+			lcdprint(0, 2, fmt.Sprintf("Roll=%f", s.roll))
+			lcdprint(0, 22, fmt.Sprintf("Pich=%f", s.pich))
+			lcdprint(0, 42, fmt.Sprintf("Yaw=%f", s.yaw))
+			break
 		}
-
-		lcdprint(0, 2, fmt.Sprintf("roll=%f", roll))
-		lcdprint(0, 22, fmt.Sprintf("Pich=%f", pich))
-		lcdprint(0, 42, fmt.Sprintf("Yaw=%f", yaw))
-		fmt.Printf("Euler roll=%f, pich=%f, yaw=%f \n", roll, pich, yaw)
-
-		ch1 <- true
 		time.Sleep(time.Millisecond * 10)
-	}
-}
-
-func ctrlLed(ch2 chan<- bool) {
-	led := machine.LED
-	led.Configure(machine.PinConfig{Mode: machine.PinOutput})
-	for {
-		led.Low()
-		time.Sleep(time.Millisecond * 100)
-
-		led.High()
-		time.Sleep(time.Millisecond * 100)
-
-		ch2 <- true
-	}
-}
-
-/*func procDisp(ch3 chan<- bool) {
-	// Display
-	display := ssd1306.NewI2C(machine.I2C0)
-
-	display.Configure(ssd1306.Config{
-		Address: 0x3C,
-		Width:   128,
-		Height:  64,
-	})
-
-	display.ClearDisplay()
-
-	x := int16(0)
-	y := int16(0)
-	deltaX := int16(1)
-	deltaY := int16(1)
-
-	for {
-		pixel := display.GetPixel(x, y)
-		c := color.RGBA{255, 255, 255, 255}
-		if pixel {
-			c = color.RGBA{0, 0, 0, 255}
-		}
-		display.SetPixel(x, y, c)
-		_ = display.Display()
-
-		x += deltaX
-		y += deltaY
-
-		if x == 0 || x == 127 {
-			deltaX = -deltaX
-		}
-
-		if y == 0 || y == 63 {
-			deltaY = -deltaY
-		}
-		time.Sleep(time.Millisecond * 50)
 		ch3 <- true
 	}
-}*/
+}
 
 func init() {
 	err := machine.I2C0.Configure(machine.I2CConfig{
@@ -133,23 +111,21 @@ func main() {
 	time.Sleep(time.Millisecond * 100)
 
 	// チャネル作成
-	ch1 := make(chan bool, 1)
-	ch2 := make(chan bool, 1)
-	//ch3 := make(chan bool, 1)
+	snrCh := make(chan sensor, 1)
+	ledCh := make(chan bool, 1)
+	devCh := make(chan bool, 1)
 
-	go getSensor(ch1)
-	go ctrlLed(ch2)
-	//go procDisp(ch3)
+	go getSensor(snrCh)
+	go ctrlLed(ledCh)
+	go procDisp(snrCh, devCh)
 
 	for {
 		// Receive channel data from Goroutine
 		select {
-		case <-ch1:
+		case <-ledCh:
 			break
-		case <-ch2:
+		case <-devCh:
 			break
-			/*case <-ch3:
-			break*/
 		}
 	}
 }
