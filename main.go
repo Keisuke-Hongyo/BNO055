@@ -1,7 +1,7 @@
 /*----------------------------------------------------------------------------------*/
 /*                  BNO055 Library For Tingo Test Program                           */
 /*                      Programed By Keisuke Hongyo                                 */
-/*                           Date 13.Aug.2020                                       */
+/*                           Date 13.Aug.2024                                       */
 /*                 Special Thanks for  Suzupy , Shun and Yukipy                     */
 /*----------------------------------------------------------------------------------*/
 
