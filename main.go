@@ -28,7 +28,7 @@ func getSensor(snrCh chan<- sensor) {
 
 	d := bno055.New(machine.I2C0)
 
-	_ = d.Init(bno055.OPERATION_MODE_NDOF)
+	_ = d.Init()
 
 	for {
 		for {
@@ -86,9 +86,9 @@ func procDisp(snrCh <-chan sensor, ch3 chan<- bool) {
 	for {
 		select {
 		case s := <-snrCh:
-			lcdprint(0, 2, fmt.Sprintf("Roll=%f", s.roll))
-			lcdprint(0, 22, fmt.Sprintf("Pich=%f", s.pich))
-			lcdprint(0, 42, fmt.Sprintf("Yaw=%f", s.yaw))
+			lcdprint(0, 2, fmt.Sprintf("Roll=%5.1f", s.roll))
+			lcdprint(0, 22, fmt.Sprintf("Pich=%5.1f", s.pich))
+			lcdprint(0, 42, fmt.Sprintf("Yaw=%5.1f", s.yaw))
 			break
 		}
 		time.Sleep(time.Millisecond * 10)

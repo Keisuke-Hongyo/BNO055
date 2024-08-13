@@ -264,6 +264,8 @@ func (d *Device) GetTemp() (chk bool, temp int8) {
 	temp = int8(data[0])
 	return true, temp
 }
+
+// GetCalibration
 func (d *Device) GetCalibration() (chk bool, snr SensorCalibration) {
 	data := make([]byte, 1)
 	err := d.readRegister(d.deviceAddress, uint8(BNO055_CALIB_STAT_ADDR), data)
