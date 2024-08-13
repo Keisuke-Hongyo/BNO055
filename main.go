@@ -10,7 +10,7 @@ package main
 import (
 	"bno055/bno055"
 	"fmt"
-	"image/color"
+	font "github.com/Nondzu/ssd1306_font"
 	"machine"
 	"time"
 	"tinygo.org/x/drivers/ssd1306"
@@ -23,6 +23,26 @@ func getSensor(ch1 chan<- bool) {
 	d := bno055.New(machine.I2C0)
 
 	_ = d.Init(bno055.OPERATION_MODE_NDOF)
+	dev := ssd1306.NewI2C(machine.I2C0)
+
+	dev.Configure(ssd1306.Config{
+		Address: 0x3C,
+		Width:   128,
+		Height:  64,
+	})
+
+	dev.ClearBuffer()
+	dev.ClearDisplay()
+
+	//font library init
+	display := font.NewDisplay(dev)
+	display.Configure(font.Config{FontType: font.FONT_11x18})
+
+	lcdprint := func(x int16, y int16, str string) {
+		display.XPos = x // set position X
+		display.YPos = y // set position Y
+		display.PrintText(str)
+	}
 
 	for {
 		for {
@@ -33,10 +53,13 @@ func getSensor(ch1 chan<- bool) {
 			time.Sleep(time.Millisecond * 100)
 		}
 
+		lcdprint(0, 2, fmt.Sprintf("roll=%f", roll))
+		lcdprint(0, 22, fmt.Sprintf("Pich=%f", pich))
+		lcdprint(0, 42, fmt.Sprintf("Yaw=%f", yaw))
 		fmt.Printf("Euler roll=%f, pich=%f, yaw=%f \n", roll, pich, yaw)
 
 		ch1 <- true
-		time.Sleep(time.Millisecond * 100)
+		time.Sleep(time.Millisecond * 10)
 	}
 }
 
@@ -54,7 +77,7 @@ func ctrlLed(ch2 chan<- bool) {
 	}
 }
 
-func procDisp(ch3 chan<- bool) {
+/*func procDisp(ch3 chan<- bool) {
 	// Display
 	display := ssd1306.NewI2C(machine.I2C0)
 
@@ -93,7 +116,7 @@ func procDisp(ch3 chan<- bool) {
 		time.Sleep(time.Millisecond * 50)
 		ch3 <- true
 	}
-}
+}*/
 
 func init() {
 	err := machine.I2C0.Configure(machine.I2CConfig{
@@ -112,11 +135,11 @@ func main() {
 	// チャネル作成
 	ch1 := make(chan bool, 1)
 	ch2 := make(chan bool, 1)
-	ch3 := make(chan bool, 1)
+	//ch3 := make(chan bool, 1)
 
 	go getSensor(ch1)
 	go ctrlLed(ch2)
-	go procDisp(ch3)
+	//go procDisp(ch3)
 
 	for {
 		// Receive channel data from Goroutine
@@ -125,8 +148,8 @@ func main() {
 			break
 		case <-ch2:
 			break
-		case <-ch3:
-			break
+			/*case <-ch3:
+			break*/
 		}
 	}
 }
