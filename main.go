@@ -51,10 +51,10 @@ func ctrlLed(ledCh chan<- bool) {
 	led.Configure(machine.PinConfig{Mode: machine.PinOutput})
 	for {
 		led.Low()
-		time.Sleep(time.Millisecond * 100)
+		time.Sleep(time.Millisecond * 500)
 
 		led.High()
-		time.Sleep(time.Millisecond * 100)
+		time.Sleep(time.Millisecond * 500)
 
 		ledCh <- true
 	}
@@ -74,7 +74,7 @@ func procDisp(snrCh <-chan sensor, ch3 chan<- bool) {
 	dev.ClearDisplay()
 
 	//font library init
-	display := font.NewDisplay(dev)
+	display := font.NewDisplay(*dev)
 	display.Configure(font.Config{FontType: font.FONT_11x18})
 
 	lcdprint := func(x int16, y int16, str string) {

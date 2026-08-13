@@ -181,7 +181,7 @@ func (d *Device) GetMag() bool {
 	return true
 }
 
-// GetAccl オイラー角データ取得
+// GetEuler オイラー角データ取得
 func (d *Device) GetEuler() bool {
 	data := make([]byte, 6)
 
