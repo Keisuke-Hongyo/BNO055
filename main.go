@@ -22,14 +22,51 @@ type sensor struct {
 	yaw  float64
 }
 
+type cabration struct {
+	roll float64
+	pich float64
+	yaw  float64
+}
+
 func getSensor(snrCh chan<- sensor) {
 	var chk bool
 	var snr sensor
+	var cab cabration
+	
+	var cnt uint8
 
 	d := bno055.New(machine.I2C0)
 
 	_ = d.Init()
+	
+	// cabration
+	cnt = 0
+	cab.pich = 0.00
+	cab.roll = 0.00
+	cab.yaw = 0.00
+	for {
+		
+		if cnt>= 10 {
+			cab.pich /= float64(cnt)
+			cab.roll /= float64(cnt)
+			cab.yaw  /= float64(cnt)
+			
+			break;
+		}
 
+		for {
+			chk, snr.roll, snr.pich, snr.yaw = d.QuaternionToEuler()
+			if chk {
+				cab.pich += snr.pich
+				cab.roll += snr.roll 
+				cab.yaw  += snr.yaw	
+				cnt++
+				break
+			}
+			time.Sleep(time.Millisecond * 100)
+		}
+	}
+	
 	for {
 		for {
 			chk, snr.roll, snr.pich, snr.yaw = d.QuaternionToEuler()
@@ -38,6 +75,11 @@ func getSensor(snrCh chan<- sensor) {
 			}
 			time.Sleep(time.Millisecond * 100)
 		}
+		
+		// 補正
+		 snr.roll -= cab.roll
+		 snr.pich -= cab.pich
+		 snr.yaw -= cab.yaw
 
 		fmt.Printf("Euler roll=%f, pich=%f, yaw=%f \n", snr.roll, snr.pich, snr.yaw)
 
@@ -82,7 +124,9 @@ func procDisp(snrCh <-chan sensor, ch3 chan<- bool) {
 		display.YPos = y // set position Y
 		display.PrintText(str)
 	}
-
+	
+	lcdprint(0, 2, fmt.Sprintf("Cabration"))
+	
 	for {
 		select {
 		case s := <-snrCh:
