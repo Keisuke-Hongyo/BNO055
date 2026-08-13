@@ -10,15 +10,22 @@ package main
 import (
 	"bno055/bno055"
 	"fmt"
+	font "github.com/Nondzu/ssd1306_font"
 	"machine"
 	"time"
+	"tinygo.org/x/drivers/ssd1306"
 )
 
-func main() {
+type sensor struct {
+	roll float64
+	pich float64
+	yaw  float64
+}
+
+func getSensor(snrCh chan<- sensor) {
 	var chk bool
 	var roll, pich, yaw float64
 	var proc uint8
-	var cab bno055.SensorCalibration
 	err := machine.I2C0.Configure(machine.I2CConfig{
 		Frequency: 400 * machine.KHz,
 	})
@@ -32,22 +39,11 @@ func main() {
 	d := bno055.New(machine.I2C0)
 
 	if d.Init() {
-
 		proc = 6
 		for {
 			led.Low()
 			time.Sleep(time.Millisecond * 50)
 			switch proc {
-			case 0:
-
-				time.Sleep(10 * time.Millisecond)
-				chk, cab = d.GetCalibration()
-				fmt.Printf("Calibration: sytem:%d Gyro:%d Accel:%d Mag:%d\n",
-					cab.Systm, cab.Gyro, cab.Accel, cab.Mag,
-				)
-
-				break
-
 			case 1:
 				chk = d.GetAccl()
 				if !chk {
