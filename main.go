@@ -10,9 +10,10 @@ package main
 import (
 	"bno055/bno055"
 	"fmt"
-	font "github.com/Nondzu/ssd1306_font"
 	"machine"
 	"time"
+
+	font "github.com/Nondzu/ssd1306_font"
 	"tinygo.org/x/drivers/ssd1306"
 )
 
@@ -31,42 +32,11 @@ type cabration struct {
 func getSensor(snrCh chan<- sensor) {
 	var chk bool
 	var snr sensor
-	var cab cabration
-	
-	var cnt uint8
 
 	d := bno055.New(machine.I2C0)
 
 	_ = d.Init()
-	
-	// cabration
-	cnt = 0
-	cab.pich = 0.00
-	cab.roll = 0.00
-	cab.yaw = 0.00
-	for {
-		
-		if cnt>= 10 {
-			cab.pich /= float64(cnt)
-			cab.roll /= float64(cnt)
-			cab.yaw  /= float64(cnt)
-			
-			break;
-		}
 
-		for {
-			chk, snr.roll, snr.pich, snr.yaw = d.QuaternionToEuler()
-			if chk {
-				cab.pich += snr.pich
-				cab.roll += snr.roll 
-				cab.yaw  += snr.yaw	
-				cnt++
-				break
-			}
-			time.Sleep(time.Millisecond * 100)
-		}
-	}
-	
 	for {
 		for {
 			chk, snr.roll, snr.pich, snr.yaw = d.QuaternionToEuler()
@@ -75,11 +45,6 @@ func getSensor(snrCh chan<- sensor) {
 			}
 			time.Sleep(time.Millisecond * 100)
 		}
-		
-		// 補正
-		 snr.roll -= cab.roll
-		 snr.pich -= cab.pich
-		 snr.yaw -= cab.yaw
 
 		fmt.Printf("Euler roll=%f, pich=%f, yaw=%f \n", snr.roll, snr.pich, snr.yaw)
 
@@ -124,15 +89,15 @@ func procDisp(snrCh <-chan sensor, ch3 chan<- bool) {
 		display.YPos = y // set position Y
 		display.PrintText(str)
 	}
-	
+
 	lcdprint(0, 2, fmt.Sprintf("Cabration"))
-	
+
 	for {
 		select {
 		case s := <-snrCh:
-			lcdprint(0, 2, fmt.Sprintf("Roll=%5.1f", s.roll))
-			lcdprint(0, 22, fmt.Sprintf("Pich=%5.1f", s.pich))
-			lcdprint(0, 42, fmt.Sprintf("Yaw=%5.1f", s.yaw))
+			lcdprint(0, 2, fmt.Sprintf("Roll=%6.1f", s.roll))
+			lcdprint(0, 22, fmt.Sprintf("Pich=%6.1f", s.pich))
+			lcdprint(0, 42, fmt.Sprintf("Yaw=%6.1f", s.yaw))
 			break
 		}
 		time.Sleep(time.Millisecond * 10)
